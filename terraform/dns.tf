@@ -85,7 +85,12 @@ resource "aws_glue_catalog_table" "dns_events" {
     }
     columns {
       name    = "dns"
-      type    = "struct<version:int,type:string,id:int,flags:string,qr:boolean,rd:boolean,ra:boolean,rrname:string,rrtype:string,rcode:string,>"
+      type    = "struct<version:int,type:string,id:int,flags:string,qr:boolean,rd:boolean,ra:boolean,rrname:string,rrtype:string,rcode:string,answers:array<struct<rrname:string,rrtype:string,ttl:int,rdata:string>>>"
+      comment = ""
+    }
+    columns {
+      name    = "geoip_data"
+      type    = "struct<source:struct<city_name:string,continent_code:string,continent_name:string,country_iso_code:string,country_name:string,latitude:double,longitude:double,location_accuracy_radius:int,time_zone:string,postal_code:string,is_anonymous_proxy:boolean,is_satellite_provider:boolean,subdivisions:array<struct<iso_code:string,name:string>>>,dest:struct<city_name:string,continent_code:string,continent_name:string,country_iso_code:string,country_name:string,latitude:double,longitude:double,location_accuracy_radius:int,time_zone:string,postal_code:string,is_anonymous_proxy:boolean,is_satellite_provider:boolean,subdivisions:array<struct<iso_code:string,name:string>>>>"
       comment = ""
     }
   }

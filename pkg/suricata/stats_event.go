@@ -1,6 +1,7 @@
 package suricata
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/sheacloud/surithena/internal/storage"
@@ -10,16 +11,6 @@ type StatsEvent struct {
 	Timestamp string `json:"timestamp"`
 	EventTime int64  `parquet:"name=event_time, type=INT64, convertedtype=TIMESTAMP_MILLIS"`
 	EventType string `json:"event_type"`
-	SrcIP     string `json:"src_ip" parquet:"name=src_ip, type=BYTE_ARRAY, convertedtype=UTF8"`
-	DestIP    string `json:"dest_ip" parquet:"name=dest_ip, type=BYTE_ARRAY, convertedtype=UTF8"`
-	SrcPort   int    `json:"src_port" parquet:"name=src_port, type=INT32"`
-	DestPort  int    `json:"dest_port" parquet:"name=dest_port, type=INT32"`
-	Proto     string `json:"proto" parquet:"name=proto, type=BYTE_ARRAY, convertedtype=UTF8"`
-	AppProto  string `json:"app_proto" parquet:"name=app_proto, type=BYTE_ARRAY, convertedtype=UTF8"`
-	FlowID    int64  `json:"flow_id" parquet:"name=flow_id, type=INT64"`
-	InIface   string `json:"in_iface" parquet:"name=in_iface, type=BYTE_ARRAY, convertedtype=UTF8"`
-	Vlan      int    `json:"vlan" parquet:"name=vlan, type=INT32"`
-	TxID      int    `json:"tx_id" parquet:"name=tx_id, type=INT32"`
 
 	Stats struct {
 		Uptime  int64 `json:"uptime" parquet:"name=uptime, type=INT64"`
@@ -27,7 +18,7 @@ type StatsEvent struct {
 			KernelPackets int64 `json:"kernel_packets" parquet:"name=kernel_packets, type=INT64"`
 			KernelDrops   int64 `json:"kernel_drops" parquet:"name=kernel_drops, type=INT64"`
 			Errors        int64 `json:"errors" parquet:"name=errors, type=INT64"`
-		} `json:"capture"`
+		} `json:"capture" parquet:"name=capture"`
 		Decoder struct {
 			Pkts           int64 `json:"pkts" parquet:"name=pkts, type=INT64"`
 			Bytes          int64 `json:"bytes" parquet:"name=bytes, type=INT64"`
@@ -62,7 +53,7 @@ type StatsEvent struct {
 			MaxMacAddrsSrc int64 `json:"max_mac_addrs_src" parquet:"name=max_mac_addrs_src, type=INT64"`
 			MaxMacAddrsDst int64 `json:"max_mac_addrs_dst" parquet:"name=max_mac_addrs_dst, type=INT64"`
 			ERSpan         int64 `json:"erspan" parquet:"name=erspan, type=INT64"`
-		} `json:"decoder"`
+		} `json:"decoder" parquet:"name=decoder"`
 		Flow struct {
 			Memcap            int64 `json:"memcap" parquet:"name=memcap, type=INT64"`
 			TCP               int64 `json:"tcp" parquet:"name=tcp, type=INT64"`
@@ -75,7 +66,7 @@ type StatsEvent struct {
 			GetUsedEvalReject int64 `json:"get_used_eval_reject" parquet:"name=get_used_eval_reject, type=INT64"`
 			GetUsedEvalBusy   int64 `json:"get_used_eval_busy" parquet:"name=get_used_eval_busy, type=INT64"`
 			GetUsedFailed     int64 `json:"get_used_failed" parquet:"name=get_used_failed, type=INT64"`
-		} `json:"flow"`
+		} `json:"flow" parquet:"name=flow"`
 		TCP struct {
 			Sessions        int64 `json:"sessions" parquet:"name=sessions, type=INT64"`
 			SSNMemcapDrop   int64 `json:"ssn_memcap_drop" parquet:"name=ssn_memcap_drop, type=INT64"`
@@ -86,14 +77,15 @@ type StatsEvent struct {
 			Syn             int64 `json:"syn" parquet:"name=syn, type=INT64"`
 			Synack          int64 `json:"synack" parquet:"name=synack, type=INT64"`
 			Rst             int64 `json:"rst" parquet:"name=rst, type=INT64"`
-		} `json:"tcp"`
+		} `json:"tcp" parquet:"name=tcp"`
 	} `json:"stats" parquet:"name=stats"`
 }
 
 func (e StatsEvent) GetDateHourKey() storage.DateHourKey {
+	hour, _ := strconv.Atoi(e.Timestamp[11:13])
 	return storage.DateHourKey{
 		Date: e.Timestamp[:10],
-		Hour: e.Timestamp[11:13],
+		Hour: hour,
 	}
 }
 

@@ -93,6 +93,11 @@ resource "aws_glue_catalog_table" "flow_events" {
       type    = "struct<tcp_flags:string,tcp_flags_ts:string,tcp_flags_tc:string,syn:boolean,rst:boolean,ack:boolean,ecn:boolean,cwr:boolean,psh:boolean,fin:boolean,urg:boolean,state:string>"
       comment = ""
     }
+    columns {
+      name    = "geoip_data"
+      type    = "struct<source:struct<city_name:string,continent_code:string,continent_name:string,country_iso_code:string,country_name:string,latitude:double,longitude:double,location_accuracy_radius:int,time_zone:string,postal_code:string,is_anonymous_proxy:boolean,is_satellite_provider:boolean,subdivisions:array<struct<iso_code:string,name:string>>>,dest:struct<city_name:string,continent_code:string,continent_name:string,country_iso_code:string,country_name:string,latitude:double,longitude:double,location_accuracy_radius:int,time_zone:string,postal_code:string,is_anonymous_proxy:boolean,is_satellite_provider:boolean,subdivisions:array<struct<iso_code:string,name:string>>>>"
+      comment = ""
+    }
   }
 
   partition_keys {

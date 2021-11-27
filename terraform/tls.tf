@@ -84,8 +84,18 @@ resource "aws_glue_catalog_table" "tls_events" {
       comment = ""
     }
     columns {
+      name    = "traffic"
+      type    = "struct<id:array<string>,label:array<string>>"
+      comment = ""
+    }
+    columns {
       name    = "tls"
-      type    = "struct<subject:string,issuerdn:string,serial:string,fingerprint:string,sni:string,version:string,notbefore:string,notafter:string,>"
+      type    = "struct<subject:string,issuerdn:string,serial:string,fingerprint:string,sni:string,version:string,notbefore:string,notafter:string,ja3:struct<hash:string,string:string>,ja3s:struct<hash:string,string:string>>"
+      comment = ""
+    }
+    columns {
+      name    = "geoip_data"
+      type    = "struct<source:struct<city_name:string,continent_code:string,continent_name:string,country_iso_code:string,country_name:string,latitude:double,longitude:double,location_accuracy_radius:int,time_zone:string,postal_code:string,is_anonymous_proxy:boolean,is_satellite_provider:boolean,subdivisions:array<struct<iso_code:string,name:string>>>,dest:struct<city_name:string,continent_code:string,continent_name:string,country_iso_code:string,country_name:string,latitude:double,longitude:double,location_accuracy_radius:int,time_zone:string,postal_code:string,is_anonymous_proxy:boolean,is_satellite_provider:boolean,subdivisions:array<struct<iso_code:string,name:string>>>>"
       comment = ""
     }
   }

@@ -1,8 +1,10 @@
 package suricata
 
 import (
+	"strconv"
 	"time"
 
+	"github.com/oschwald/geoip2-golang"
 	"github.com/sheacloud/surithena/internal/storage"
 )
 
@@ -48,12 +50,32 @@ type FlowEvent struct {
 		Urg        bool   `json:"urg" parquet:"name=urg, type=BOOLEAN"`
 		State      string `json:"state" parquet:"name=state, type=BYTE_ARRAY, convertedtype=UTF8"`
 	} `json:"tcp" parquet:"name=tcp"`
+
+	GeoIPData struct {
+		Source GeoIPData `json:"source" parquet:"name=source"`
+		Dest   GeoIPData `json:"dest" parquet:"name=dest"`
+	} `json:"geoip_data" parquet:"name=geoip_data"`
+}
+
+func (e *FlowEvent) UpdateGeoIP(reader *geoip2.Reader) error {
+	source, err := GetGeoIPData(reader, e.SrcIP)
+	if err != nil {
+		return err
+	}
+	e.GeoIPData.Source = *source
+	dest, err := GetGeoIPData(reader, e.DestIP)
+	if err != nil {
+		return err
+	}
+	e.GeoIPData.Dest = *dest
+	return nil
 }
 
 func (e FlowEvent) GetDateHourKey() storage.DateHourKey {
+	hour, _ := strconv.Atoi(e.Timestamp[11:13])
 	return storage.DateHourKey{
 		Date: e.Timestamp[:10],
-		Hour: e.Timestamp[11:13],
+		Hour: hour,
 	}
 }
 

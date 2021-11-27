@@ -88,6 +88,11 @@ resource "aws_glue_catalog_table" "http_events" {
       type    = "struct<http_port:int,hostname:string,url:string,http_user_agent:string,http_content_type:string,http_refer:string,http_method:string,protocol:string,status:int,length:int>"
       comment = ""
     }
+    columns {
+      name    = "geoip_data"
+      type    = "struct<source:struct<city_name:string,continent_code:string,continent_name:string,country_iso_code:string,country_name:string,latitude:double,longitude:double,location_accuracy_radius:int,time_zone:string,postal_code:string,is_anonymous_proxy:boolean,is_satellite_provider:boolean,subdivisions:array<struct<iso_code:string,name:string>>>,dest:struct<city_name:string,continent_code:string,continent_name:string,country_iso_code:string,country_name:string,latitude:double,longitude:double,location_accuracy_radius:int,time_zone:string,postal_code:string,is_anonymous_proxy:boolean,is_satellite_provider:boolean,subdivisions:array<struct<iso_code:string,name:string>>>>"
+      comment = ""
+    }
   }
 
   partition_keys {

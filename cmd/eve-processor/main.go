@@ -3,18 +3,20 @@ package main
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/oschwald/geoip2-golang"
 	"github.com/sheacloud/surithena/internal/storage"
 	"github.com/sheacloud/surithena/pkg/suricata"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -39,6 +41,34 @@ func signalHandler(stopCh chan struct{}) {
 	}
 }
 
+func init() {
+	logrus.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp: true,
+	})
+
+	viper.AutomaticEnv()
+
+	viper.BindEnv("eve_socket_path")
+	viper.SetDefault("eve_socket_path", "/tmp/eve.sock")
+
+	viper.BindEnv("mmdb_path")
+	viper.SetDefault("mmdb_path", "/var/lib/eve-processor/GeoLite2-City.mmdb")
+
+	viper.BindEnv("s3_bucket_name")
+
+	viper.BindEnv("worker_threads")
+	viper.SetDefault("worker_threads", 10)
+
+	viper.BindEnv("file_timeout_minutes")
+	viper.SetDefault("file_timeout_minutes", 5)
+
+	viper.BindEnv("file_max_age_minutes")
+	viper.SetDefault("file_max_age_minutes", 15)
+
+	viper.BindEnv("file_max_size_bytes")
+	viper.SetDefault("file_max_size_bytes", 2000)
+}
+
 func serve(c net.Conn, outputChan chan<- string) {
 	defer c.Close()
 
@@ -57,7 +87,7 @@ func main() {
 
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-east-1"))
 	if err != nil {
-		log.Fatalf("failed to load configuration, %v", err)
+		logrus.Fatalf("failed to load configuration, %v", err)
 	}
 
 	s3Client := s3.NewFromConfig(cfg)
@@ -65,12 +95,18 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	l, err := net.Listen("unix", "/tmp/eve.sock")
+	l, err := net.Listen("unix", viper.GetString("eve_socket_path"))
 	if err != nil {
 		panic(err)
 	}
-	defer os.Remove("/tmp/eve.sock")
-	os.Chmod("/tmp/eve.sock", 0777)
+	defer os.Remove(viper.GetString("eve_socket_path"))
+	os.Chmod(viper.GetString("eve_socket_path"), 0777)
+
+	mmdb, err := geoip2.Open(viper.GetString("mmdb_path"))
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	defer mmdb.Close()
 
 	eveChannel := make(chan string)
 	go func() {
@@ -85,84 +121,33 @@ func main() {
 
 	writers := map[string]*storage.RotatingWriter{}
 	for name := range EventModels {
-		writers[name] = storage.NewRotatingWriter(s3Client, "sheacloud-core-surithena", name)
+		writers[name] = storage.NewRotatingWriter(s3Client, viper.GetString("s3_bucket_name"), name, viper.GetInt("file_timeout_minutes"), viper.GetInt("file_max_age_minutes"), viper.GetInt64("file_max_size_bytes"))
 	}
 
-	go func() {
-		for eveJSON := range eveChannel {
-			eveEvent := suricata.EveBase{}
-			err = json.Unmarshal([]byte(eveJSON), &eveEvent)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println("got event ", eveEvent.EventType)
-			var eventObject storage.Rotatable
-			switch eveEvent.EventType {
-			case "alert":
-				alertEvent := suricata.AlertEvent{}
-				err = json.Unmarshal([]byte(eveJSON), &alertEvent)
-				if err != nil {
-					panic(err)
-				}
-				eventObject = &alertEvent
-			case "dns":
-				dnsEvent := suricata.DNSEvent{}
-				err = json.Unmarshal([]byte(eveJSON), &dnsEvent)
-				if err != nil {
-					panic(err)
-				}
-				eventObject = &dnsEvent
-			case "flow":
-				flowEvent := suricata.FlowEvent{}
-				err = json.Unmarshal([]byte(eveJSON), &flowEvent)
-				if err != nil {
-					panic(err)
-				}
-				eventObject = &flowEvent
-			case "http":
-				httpEvent := suricata.HTTPEvent{}
-				err = json.Unmarshal([]byte(eveJSON), &httpEvent)
-				if err != nil {
-					panic(err)
-				}
-				eventObject = &httpEvent
-			case "tls":
-				tlsEvent := suricata.TLSEvent{}
-				err = json.Unmarshal([]byte(eveJSON), &tlsEvent)
-				if err != nil {
-					panic(err)
-				}
-				eventObject = &tlsEvent
-			case "stats":
-				statsEvent := suricata.StatsEvent{}
-				err = json.Unmarshal([]byte(eveJSON), &statsEvent)
-				if err != nil {
-					panic(err)
-				}
-				eventObject = &statsEvent
-			case "dhcp":
-				dhcpEvent := suricata.DHCPEvent{}
-				err = json.Unmarshal([]byte(eveJSON), &dhcpEvent)
-				if err != nil {
-					panic(err)
-				}
-				eventObject = &dhcpEvent
-			default:
-				eventObject = nil
-			}
-
-			if eventObject != nil {
-				eventObject.UpdateFields()
-				err = writers[eveEvent.EventType].Write(eventObject)
-				if err != nil {
-					fmt.Println(eveEvent.EventType, err)
-					panic(err)
-				}
-			}
-		}
-	}()
+	cancelChannels := []chan bool{}
+	workerWaitGroup := &sync.WaitGroup{}
+	for i := 0; i < viper.GetInt("worker_threads"); i++ {
+		cancelCh := make(chan bool)
+		cancelChannels = append(cancelChannels, cancelCh)
+		workerWaitGroup.Add(1)
+		go func(cancelCh <-chan bool, workerNumber int) {
+			Worker(eveChannel, cancelCh, workerWaitGroup, workerNumber, mmdb, writers)
+		}(cancelCh, i)
+	}
 
 	<-stopChannel
+
+	logrus.Info("received interupt signal")
+
+	for _, cancelCh := range cancelChannels {
+		cancelCh <- true
+	}
+
+	logrus.Info("sent cancel signal to all worker threads")
+
+	workerWaitGroup.Wait()
+
+	logrus.Info("worker threads have been stopped")
 
 	for _, writer := range writers {
 		err = writer.Close()
@@ -171,5 +156,5 @@ func main() {
 		}
 	}
 
-	fmt.Println("closed all writers")
+	logrus.Info("closed all S3 parquet writers")
 }

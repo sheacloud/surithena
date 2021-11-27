@@ -34,58 +34,8 @@ resource "aws_glue_catalog_table" "stats_events" {
       comment = ""
     }
     columns {
-      name    = "src_ip"
-      type    = "string"
-      comment = ""
-    }
-    columns {
-      name    = "dest_ip"
-      type    = "string"
-      comment = ""
-    }
-    columns {
-      name    = "src_port"
-      type    = "int"
-      comment = ""
-    }
-    columns {
-      name    = "dest_port"
-      type    = "int"
-      comment = ""
-    }
-    columns {
-      name    = "proto"
-      type    = "string"
-      comment = ""
-    }
-    columns {
-      name    = "app_proto"
-      type    = "string"
-      comment = ""
-    }
-    columns {
-      name    = "flow_id"
-      type    = "bigint"
-      comment = ""
-    }
-    columns {
-      name    = "in_iface"
-      type    = "string"
-      comment = ""
-    }
-    columns {
-      name    = "vlan"
-      type    = "int"
-      comment = ""
-    }
-    columns {
-      name    = "tx_id"
-      type    = "int"
-      comment = ""
-    }
-    columns {
       name    = "stats"
-      type    = "struct<uptime:bigint,>"
+      type    = "struct<uptime:bigint,capture:struct<kernel_packets:bigint,kernel_drops:bigint,errors:bigint>,decoder:struct<pkts:bigint,bytes:bigint,invalid:bigint,ipv4:bigint,ipv6:bigint,ethernet:bigint,chdlc:bigint,raw:bigint,null:bigint,sll:bigint,tcp:bigint,udp:bigint,sctp:bigint,icmpv4:bigint,icmpv6:bigint,ppp:bigint,pppoe:bigint,geneve:bigint,gre:bigint,vlan:bigint,vlan_qinq:bigint,vxlan:bigint,vntag:bigint,ieee8021ah:bigint,teredo:bigint,ipv4_in_ipv6:bigint,ipv6_in_ipv6:bigint,mpls:bigint,avg_packet_size:bigint,max_packet_size:bigint,max_mac_addrs_src:bigint,max_mac_addrs_dst:bigint,erspan:bigint>,flow:struct<memcap:bigint,tcp:bigint,udp:bigint,icmpv4:bigint,icmpv6:bigint,tcp_reuse:bigint,get_used:bigint,get_used_eval:bigint,get_used_eval_reject:bigint,get_used_eval_busy:bigint,get_used_failed:bigint>,tcp:struct<sessions:bigint,ssn_memcap_drop:bigint,pseudo:bigint,pseudo_failed:bigint,invalid_checksum:bigint,no_flow:bigint,syn:bigint,synack:bigint,rst:bigint>>"
       comment = ""
     }
   }

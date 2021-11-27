@@ -1,8 +1,10 @@
 package suricata
 
 import (
+	"strconv"
 	"time"
 
+	"github.com/oschwald/geoip2-golang"
 	"github.com/sheacloud/surithena/internal/storage"
 )
 
@@ -37,14 +39,34 @@ type DNSEvent struct {
 			RRType string `json:"rrtype" parquet:"name=rrtype, type=BYTE_ARRAY, convertedtype=UTF8"`
 			TTL    int    `json:"ttl" parquet:"name=ttl, type=INT32"`
 			RData  string `json:"rdata" parquet:"name=rdata, type=BYTE_ARRAY, convertedtype=UTF8"`
-		} `json:"answers"`
+		} `json:"answers" parquet:"name=answers"`
 	} `json:"dns" parquet:"name=dns"`
+
+	GeoIPData struct {
+		Source GeoIPData `json:"source" parquet:"name=source"`
+		Dest   GeoIPData `json:"dest" parquet:"name=dest"`
+	} `json:"geoip_data" parquet:"name=geoip_data"`
+}
+
+func (e *DNSEvent) UpdateGeoIP(reader *geoip2.Reader) error {
+	source, err := GetGeoIPData(reader, e.SrcIP)
+	if err != nil {
+		return err
+	}
+	e.GeoIPData.Source = *source
+	dest, err := GetGeoIPData(reader, e.DestIP)
+	if err != nil {
+		return err
+	}
+	e.GeoIPData.Dest = *dest
+	return nil
 }
 
 func (e DNSEvent) GetDateHourKey() storage.DateHourKey {
+	hour, _ := strconv.Atoi(e.Timestamp[11:13])
 	return storage.DateHourKey{
 		Date: e.Timestamp[:10],
-		Hour: e.Timestamp[11:13],
+		Hour: hour,
 	}
 }
 

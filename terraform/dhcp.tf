@@ -88,6 +88,11 @@ resource "aws_glue_catalog_table" "dhcp_events" {
       type    = "struct<type:string,id:int,client_mac:string,assigned_ip:string,dhcp_type:string,renewal_time:int>"
       comment = ""
     }
+    columns {
+      name    = "geoip_data"
+      type    = "struct<source:struct<city_name:string,continent_code:string,continent_name:string,country_iso_code:string,country_name:string,latitude:double,longitude:double,location_accuracy_radius:int,time_zone:string,postal_code:string,is_anonymous_proxy:boolean,is_satellite_provider:boolean,subdivisions:array<struct<iso_code:string,name:string>>>,dest:struct<city_name:string,continent_code:string,continent_name:string,country_iso_code:string,country_name:string,latitude:double,longitude:double,location_accuracy_radius:int,time_zone:string,postal_code:string,is_anonymous_proxy:boolean,is_satellite_provider:boolean,subdivisions:array<struct<iso_code:string,name:string>>>>"
+      comment = ""
+    }
   }
 
   partition_keys {
